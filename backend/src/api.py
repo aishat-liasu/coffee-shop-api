@@ -139,6 +139,9 @@ def update_drink(id):
         abort(400)
 
     new_title = body.get("title", None)
+    new_recipe = body.get("recipe", None)
+
+    json_recipe = json.dumps(new_recipe)
 
     drink = Drink.query.filter(Drink.id == id).one_or_none()
 
@@ -146,6 +149,10 @@ def update_drink(id):
         abort(404)
     try:
         drink.title = new_title
+
+        if new_recipe is not None:
+            drink.recipe = json_recipe
+
         drink.update()
 
         return jsonify(
