@@ -12,12 +12,7 @@ setup_db(app)
 CORS(app)
 
 
-'''
-@TODO uncomment the following line to initialize the datbase
-!! NOTE THIS WILL DROP ALL RECORDS AND START YOUR DB FROM SCRATCH
-!! NOTE THIS MUST BE UNCOMMENTED ON FIRST RUN
-!! Running this function will add one
-'''
+#Run all start of application
 #db_drop_and_create_all()
 
 # ROUTES
@@ -29,18 +24,10 @@ CORS(app)
     returns status code 200 and json {"success": True, "drinks": drinks} where drinks is the list of drinks
         or appropriate status code indicating reason for failure
 '''
-
-""" @app.route('/drinks')
-@requires_auth('get:drinks')
-def headers(payload):
-    print(payload)
-    return 'Access Granted' """
-
 @app.route("/drinks")
 def get_drinks():
 
     drinksList = Drink.query.order_by(Drink.id).all()
-
     drinks = [drink.short() for drink in drinksList]
 
     if len(drinks) == 0:
@@ -63,10 +50,10 @@ def get_drinks():
         or appropriate status code indicating reason for failure
 '''
 @app.route("/drinks-detail")
+@requires_auth('get:drinks-detail')
 def get_drinks_detail():
 
     drinksList = Drink.query.order_by(Drink.id).all()
-
     drinks_with_detail = [drink.long() for drink in drinksList]
 
     if len(drinks_with_detail) == 0:
@@ -90,31 +77,30 @@ def get_drinks_detail():
         or appropriate status code indicating reason for failure
 '''
 @app.route("/drinks", methods=["POST"])
+@requires_auth('post:drinks')
 def create_drink():
 
     body = request.get_json()
 
     if body is None or len(body.keys()) < 1:
-        print('Here')
         abort(400)
 
-    if "title" not in body or "recipe" not in body:
+    if "title" and "recipe" not in body:
         abort(400)
 
     try:
         new_title = body.get("title", None)
         new_recipe = body.get("recipe", None)
 
-        drink = Drink(title=new_title, recipe=new_recipe)
-        drink.insert()
+        json_recipe = json.dumps([new_recipe])
 
-        drinksList = Drink.query.filter(Drink.id == drink.id)
-        drinks_with_detail = [drink.long() for drink in drinksList]
+        drink = Drink(title=new_title, recipe=json_recipe)
+        drink.insert()
 
         return jsonify(
             {
             "success": True,
-            "drinks": drinks_with_detail,
+            "drinks": [drink.long()],
             }
         )
     
@@ -134,6 +120,7 @@ def create_drink():
         or appropriate status code indicating reason for failure
 '''
 @app.route("/drinks/<int:id>", methods=["PATCH"])
+@requires_auth('patch:drinks')
 def update_drink(id):
 
     body = request.get_json()
@@ -141,26 +128,23 @@ def update_drink(id):
     if body is None or len(body.keys()) < 1:
         abort(400)
 
-
-    if "title" not in body or "recipe" not in body:
+    if "title" not in body:
         abort(400)
 
+    new_title = body.get("title", None)
+
+    drink = Drink.query.filter(Drink.id == id).one_or_none()
+
+    if drink is None:
+        abort(404)
     try:
-        new_title = body.get("title", None)
-        new_recipe = body.get("recipe", None)
-
-        drink = Drink.query.filter(Drink.id == id).one_or_none()
         drink.title = new_title
-        drink.recipe = new_recipe
         drink.update()
-
-        drinksList = Drink.query.filter(Drink.id == drink.id)
-        drinks_with_detail = [drink.long() for drink in drinksList]
 
         return jsonify(
             {
             "success": True,
-            "drinks": drinks_with_detail,
+            "drinks": [drink.long()],
             }
         )
 
@@ -179,6 +163,7 @@ def update_drink(id):
 '''
 
 @app.route("/drinks/<int:id>", methods=["DELETE"])
+@requires_auth('delete:drinks')
 def delete_drink(id):
 
     drink = Drink.query.filter(Drink.id == id).one_or_none()
@@ -206,10 +191,14 @@ def delete_drink(id):
 @TODO implement error handler for AuthError
     error handler should conform to general task above
 '''
-""" 
+
 @app.errorhandler(AuthError)
-def bad_request(error):
-    return jsonify({"success": False, "error": 400, "message": "bad request"}), 400 """
+def bad_request(ex):
+
+    authResp = ex.error
+    authStatusCode = ex.status_code
+
+    return jsonify({"success": False, "error": authStatusCode, "message": authResp['description']}), authStatusCode
 
 
 @app.errorhandler(400)
