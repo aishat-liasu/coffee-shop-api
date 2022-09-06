@@ -16,6 +16,13 @@ CORS(app)
 #db_drop_and_create_all()
 
 # ROUTES
+
+@app.route('/')
+def index():
+    return jsonify({
+        'success': True,
+        'message':'Coffee Shop'})
+
 '''
 @TODO implement endpoint
     GET /drinks
@@ -92,7 +99,7 @@ def create_drink():
         new_title = body.get("title", None)
         new_recipe = body.get("recipe", None)
 
-        json_recipe = json.dumps([new_recipe])
+        json_recipe = json.dumps(new_recipe)
 
         drink = Drink(title=new_title, recipe=json_recipe)
         drink.insert()
@@ -183,7 +190,6 @@ def delete_drink(id):
 
     except:
         abort(422)
-
 
 
 
